@@ -19,12 +19,10 @@ int main() {
     auto inputPtr = inputImg.ptr();
     auto outputPtr = outputImg.ptr();
 
-    auto kernel = std::unique_ptr<float>(new float[9]);
-    for (int i = 0; i < 9; i++) {
-        kernel.get()[i] = 1. / 9.;
-    }
+    float kernel[9];
+    generateKernel(kernel, Gaussian);
 
-    applyKernel(inputPtr, outputPtr, kernel.get(), 3, size.width, size.height, inputImg.channels());
+    applyKernel(inputPtr, outputPtr, kernel, 3, size.width, size.height, inputImg.channels());
 
     cv::imwrite("../output.png", outputImg);
 }
