@@ -23,12 +23,12 @@ void applyKernel(unsigned char* in, unsigned char* out, float* kernel, int K, in
                         const int xIdx = i - center + x;
                         const int yIdx = j - center + y;
                         if (!(xIdx < 0 || xIdx >= W || yIdx < 0 || yIdx >= H)) {
-                            const int inputIdx = xIdx * C * W + yIdx * C + c;
+                            const int inputIdx = xIdx * C * H + yIdx * C + c;
                             result += kernel[i * K + j] * in[inputIdx];
                         }
                     }
                 }
-                out[x * W * C + y * C + c] = clamping(result);
+                out[x * H * C + y * C + c] = clamping(result);
             }
         }
     }
