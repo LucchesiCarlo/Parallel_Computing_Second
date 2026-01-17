@@ -1,3 +1,7 @@
+//
+// Created by giacomo on 17/01/26.
+//
+
 #include <iostream>
 #include <string>
 #include <filesystem>
@@ -12,7 +16,7 @@ namespace fs = std::filesystem;
 
 int main() {
 
-    omp_set_num_threads(5);
+    omp_set_num_threads(8);
 
     auto start_e2e = std::chrono::high_resolution_clock::now();
 
@@ -20,12 +24,17 @@ int main() {
     generateKernel(kernel, Gaussian);
 
     std::string path = "../dataset/seg_pred/seg_pred";
-    int count = 0;
+
 
     double total_k = 0;
+    std::vector<cv::String> imgList;
 
     for (const auto & entry : fs::directory_iterator(path)) {
-        cv::Mat inputImg = cv::imread(entry.path(), cv::IMREAD_UNCHANGED);
+        imgList.push_back(entry.path());
+    }
+#pragma omp parallel for default(none) shared(imgList, kernel, total_k)
+    for (int i=0; i<imgList.size(); i++) {
+        cv::Mat inputImg = cv::imread(imgList[i], cv::IMREAD_UNCHANGED);
         cv::Mat outputImg = cv::Mat::zeros(inputImg.size(), inputImg.type());
 
         if (inputImg.empty()) {
@@ -41,8 +50,11 @@ int main() {
         auto start_k = std::chrono::high_resolution_clock::now();
         applyKernel(inputPtr, outputPtr, kernel, 3, size.width, size.height, inputImg.channels());
         auto end_k = std::chrono::high_resolution_clock::now();
-        total_k += std::chrono::duration_cast<std::chrono::duration<double>>(end_k - start_k).count();
-        count++;
+
+        auto temp = std::chrono::duration_cast<std::chrono::duration<double>>(end_k - start_k).count();
+#pragma omp atomic
+        total_k += temp;
+
     }
 
     auto end_e2e = std::chrono::high_resolution_clock::now();
@@ -50,7 +62,7 @@ int main() {
 
 
     std::cout << "Time Taken End to End:" << time_e2e << "s" << std::endl;
-    std::cout << "Time Taken to apply kernel:" << total_k/count << "s" << std::endl;
-    std::cout << "Elements Elaborated:" << count << std::endl;
+    std::cout << "Time Taken to apply kernel:" << total_k/imgList.size() << "s" << std::endl;
+    std::cout << "Elements Elaborated:" << imgList.size() << std::endl;
 
 }

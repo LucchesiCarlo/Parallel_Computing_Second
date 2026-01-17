@@ -1,9 +1,9 @@
 //
-// Created by carlo on 16/01/26.
+// Created by giacomo on 17/01/26.
 //
+
 #include <cmath>
 #include "kernel_functions.h"
-
 
 inline unsigned char clamping(float x) {
     if (x < 0.0f) x = 0.0f;
@@ -14,6 +14,9 @@ inline unsigned char clamping(float x) {
 
 void applyKernel(unsigned char* in, unsigned char* out, float* kernel, int K, int W, int H, int C) {
     int center = K / 2;
+
+#pragma omp parallel for default(none) shared(in, out, kernel, center, K, W, H, C)
+
     for (int y = 0; y < H; y++){
         for (int x = 0; x < W; x++) {
             for (int c = 0; c < C; c++) {
