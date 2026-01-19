@@ -29,12 +29,16 @@ elseif (CMAKE_BUILD_TYPE STREQUAL "Release")
     add_compile_options("-ffast-math")
 endif()
 
-add_executable(Sequential main.cpp sequential_kernel.cpp)
-target_link_libraries(Sequential ${OpenCV_LIBS} )
+add_executable(ParallelKernel sequential_main.cpp)
+target_link_libraries(ParallelKernel ${OpenCV_LIBS} )
 
-add_executable(Parallel main.cpp parallel_version.cpp)
-target_link_libraries(Parallel ${OpenCV_LIBS} )
+add_executable(ParallelImg parallel_main.cpp)
+target_link_libraries(ParallelImg ${OpenCV_LIBS} )
 
-add_executable(Parallel_img parallel_main.cpp sequential_kernel.cpp)
-target_link_libraries(Parallel_img ${OpenCV_LIBS} )
+### Test Sources ###
+add_executable(SequentialTest test_sequential_main.cpp)
+target_link_libraries(SequentialTest ${OpenCV_LIBS} )
+
+add_executable(ParallelTest test_parallel_main.cpp)
+target_link_libraries(ParallelTest ${OpenCV_LIBS} )
 

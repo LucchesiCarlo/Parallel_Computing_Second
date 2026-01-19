@@ -1,19 +1,16 @@
 //
 // Created by carlo on 16/01/26.
 //
-#include <cmath>
+
+#ifndef SECOND_ASSIGNMENT_PARALLEL_KERNEL_H
+#define SECOND_ASSIGNMENT_PARALLEL_KERNEL_H
 #include "kernel_functions.h"
 
-
-inline unsigned char clamping(float x) {
-    if (x < 0.0f) x = 0.0f;
-    if (x > 255.0f) x = 255.0f;
-    x = std::roundf(x);
-    return static_cast<unsigned char> (x);
-}
-
-void applyKernel(unsigned char* in, unsigned char* out, float* kernel, int K, int W, int H, int C) {
+template <int K> void applyKernel(unsigned char* in, unsigned char* out, float* kernel, int W, int H, int C) {
     int center = K / 2;
+
+#pragma omp parallel for default(none) shared(in, out, kernel, center, W, H, C)
+
     for (int y = 0; y < H; y++){
         for (int x = 0; x < W; x++) {
             for (int c = 0; c < C; c++) {
@@ -33,3 +30,5 @@ void applyKernel(unsigned char* in, unsigned char* out, float* kernel, int K, in
         }
     }
 }
+
+#endif //SECOND_ASSIGNMENT_KERNEL_FUNCTIONS_H

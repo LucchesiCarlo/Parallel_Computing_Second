@@ -11,7 +11,7 @@ namespace fs = std::filesystem;
 #include "opencv2/core.hpp"
 #include <opencv2/core/mat.hpp>
 #include <opencv2/imgcodecs.hpp>
-#include "kernel_functions.h"
+#include "src/sequential_kernel.h"
 #include <omp.h>
 
 int main() {
@@ -32,6 +32,7 @@ int main() {
     for (const auto & entry : fs::directory_iterator(path)) {
         imgList.push_back(entry.path());
     }
+    omp_set_max_active_levels(1);
 #pragma omp parallel for default(none) shared(imgList, kernel, total_k)
     for (int i=0; i<imgList.size(); i++) {
         cv::Mat inputImg = cv::imread(imgList[i], cv::IMREAD_UNCHANGED);
@@ -48,7 +49,7 @@ int main() {
         auto outputPtr = outputImg.ptr();
 
         auto start_k = std::chrono::high_resolution_clock::now();
-        applyKernel(inputPtr, outputPtr, kernel, 3, size.width, size.height, inputImg.channels());
+        applyKernel<3>(inputPtr, outputPtr, kernel, size.width, size.height, inputImg.channels());
         auto end_k = std::chrono::high_resolution_clock::now();
 
         auto temp = std::chrono::duration_cast<std::chrono::duration<double>>(end_k - start_k).count();

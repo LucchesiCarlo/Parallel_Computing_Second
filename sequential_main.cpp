@@ -7,12 +7,12 @@ namespace fs = std::filesystem;
 #include "opencv2/core.hpp"
 #include <opencv2/core/mat.hpp>
 #include <opencv2/imgcodecs.hpp>
-#include "kernel_functions.h"
+#include "src/parallel_kernel.h"
 #include <omp.h>
 
 int main() {
 
-    omp_set_num_threads(5);
+    omp_set_num_threads(4);
 
     auto start_e2e = std::chrono::high_resolution_clock::now();
 
@@ -23,7 +23,6 @@ int main() {
     int count = 0;
 
     double total_k = 0;
-
     for (const auto & entry : fs::directory_iterator(path)) {
         cv::Mat inputImg = cv::imread(entry.path(), cv::IMREAD_UNCHANGED);
         cv::Mat outputImg = cv::Mat::zeros(inputImg.size(), inputImg.type());
@@ -39,7 +38,7 @@ int main() {
         auto outputPtr = outputImg.ptr();
 
         auto start_k = std::chrono::high_resolution_clock::now();
-        applyKernel(inputPtr, outputPtr, kernel, 3, size.width, size.height, inputImg.channels());
+        applyKernel<3>(inputPtr, outputPtr, kernel, size.width, size.height, inputImg.channels());
         auto end_k = std::chrono::high_resolution_clock::now();
         total_k += std::chrono::duration_cast<std::chrono::duration<double>>(end_k - start_k).count();
         count++;

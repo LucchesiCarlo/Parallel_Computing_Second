@@ -1,5 +1,5 @@
 //
-// Created by carlo on 16/01/26.
+// Created by carlo on 19/01/26.
 //
 
 #ifndef SECOND_ASSIGNMENT_KERNEL_FUNCTIONS_H
@@ -43,6 +43,11 @@ inline void generateKernel(float *kernel, KernelType type) {
     }
 }
 
-void applyKernel(unsigned char *in, unsigned char *out, float *kernel, int K, int W, int H, int C);
+inline unsigned char clamping(float x) {
+    if (x < 0.0f) x = 0.0f;
+    if (x > 255.0f) x = 255.0f;
+    x = std::roundf(x);
+    return static_cast<unsigned char> (x);
+}
 
 #endif //SECOND_ASSIGNMENT_KERNEL_FUNCTIONS_H

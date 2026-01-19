@@ -1,0 +1,8 @@
+#!/bin/bash
+if [ ! -f ./dataset/intel-image-classification.zip ]; then
+    curl -L -o ./dataset/intel-image-classification.zip\
+     https://www.kaggle.com/api/v1/datasets/download/puneet6060/intel-image-classification
+fi
+
+cd dataset
+unzip ./dataset/intel-image-classification.zip
