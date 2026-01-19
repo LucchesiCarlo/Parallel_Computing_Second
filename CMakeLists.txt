@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 4.1)
-project(Second_Assignment)
+
+project(Second_Assignment LANGUAGES CXX CUDA)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 
 if(UNIX)
@@ -10,9 +12,13 @@ else ()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xpreprocessor -fopenmp -lomp")
 endif ()
 
+
+
 # You need to have installed OpenCV on the local machine
 # Linux: sudo apt install libopencv-dev
 find_package( OpenCV REQUIRED )
+find_package(OpenMP REQUIRED)
+find_package(CUDAToolkit REQUIRED)
 
 include_directories( ${OpenCV_INCLUDE_DIRS} )
 
@@ -42,3 +48,6 @@ target_link_libraries(SequentialTest ${OpenCV_LIBS} )
 add_executable(ParallelTest test_parallel_main.cpp)
 target_link_libraries(ParallelTest ${OpenCV_LIBS} )
 
+
+# to optimize for the specific GPU architecture
+set_property(TARGET Second_Assignment PROPERTY CUDA_ARCHITECTURES native)
