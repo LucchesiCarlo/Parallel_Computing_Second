@@ -1,5 +1,5 @@
 //
-// Created by giacomo on 1/19/26.
+// Created by giacomo on 1/20/26.
 //
 
 
@@ -7,7 +7,11 @@
 
 
 __global__  void applyCudaKernel(unsigned char* in, unsigned char* out, float* kernel, int K, int W, int H, int C) {
+
     int center = K / 2;
+    int dimTile = (blockDim.x + (K-1))*(blockDim.y + (K-1))*C;
+    __shared__ unsigned char sMem[dimTile];
+
 
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
