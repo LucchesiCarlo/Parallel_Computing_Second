@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 4.1)
 project(Second_Assignment LANGUAGES CXX CUDA)
 
 set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
+#set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 
 if(UNIX)
@@ -48,6 +48,7 @@ target_link_libraries(SequentialTest ${OpenCV_LIBS} )
 add_executable(ParallelTest test_parallel_main.cpp)
 target_link_libraries(ParallelTest ${OpenCV_LIBS} )
 
-
+add_executable(CudaTest cuda_main.cu)
+target_link_libraries(CudaTest ${OpenCV_LIBS})
 # to optimize for the specific GPU architecture
-set_property(TARGET Second_Assignment PROPERTY CUDA_ARCHITECTURES native)
+#set_property(TARGET Second_Assignment PROPERTY CUDA_ARCHITECTURES native)
