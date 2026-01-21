@@ -89,6 +89,10 @@ int main() {
         count++;
 
         cudaMemcpy(outputPtr, deviceOutput, sizeof(unsigned char)*size.height*size.width*inputImg.channels(), cudaMemcpyKind::cudaMemcpyDeviceToHost);
+
+        std::string outputPath = "../cuda_output/" + entry.path().filename().string();
+        cv::imwrite(outputPath, outputImg);
+
     }
 
     cudaFree(deviceInput);

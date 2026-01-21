@@ -16,7 +16,7 @@ namespace fs = std::filesystem;
 
 int main() {
 
-    omp_set_num_threads(8);
+    omp_set_num_threads(4);
 
     auto start_e2e = std::chrono::high_resolution_clock::now();
 
@@ -27,7 +27,7 @@ int main() {
 
 
     double total_k = 0;
-    std::vector<cv::String> imgList;
+    std::vector<std::filesystem::path> imgList;
 
     for (const auto & entry : fs::directory_iterator(path)) {
         imgList.push_back(entry.path());
@@ -53,6 +53,10 @@ int main() {
         auto end_k = std::chrono::high_resolution_clock::now();
 
         auto temp = std::chrono::duration_cast<std::chrono::duration<double>>(end_k - start_k).count();
+
+
+        std::string outputPath = "../parallel_image_output/" + imgList[i].filename().string();
+        cv::imwrite(outputPath, outputImg);
 #pragma omp atomic
         total_k += temp;
 

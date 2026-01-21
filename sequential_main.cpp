@@ -10,6 +10,7 @@ namespace fs = std::filesystem;
 #include "src/parallel_kernel.h"
 #include <omp.h>
 
+
 int main() {
 
     omp_set_num_threads(4);
@@ -38,10 +39,17 @@ int main() {
         auto outputPtr = outputImg.ptr();
 
         auto start_k = std::chrono::high_resolution_clock::now();
+
         applyKernel<3>(inputPtr, outputPtr, kernel, size.width, size.height, inputImg.channels());
+
         auto end_k = std::chrono::high_resolution_clock::now();
         total_k += std::chrono::duration_cast<std::chrono::duration<double>>(end_k - start_k).count();
+
         count++;
+
+        std::string outputPath = "../parallel_output/" + entry.path().filename().string();
+        cv::imwrite(outputPath, outputImg);
+
     }
 
     auto end_e2e = std::chrono::high_resolution_clock::now();

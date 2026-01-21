@@ -6,4 +6,5 @@ if [ ! -f ./dataset/intel-image-classification.zip ]; then
 fi
 
 cd dataset
-unzip ./dataset/intel-image-classification.zip
+unzip ./intel-image-classification.zip
+mv ./intel-image-classification/* ./
