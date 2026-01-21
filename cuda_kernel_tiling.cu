@@ -9,12 +9,43 @@
 __global__  void applyCudaKernel(unsigned char* in, unsigned char* out, float* kernel, int K, int W, int H, int C) {
 
     int center = K / 2;
-    int dimTile = (blockDim.x + (K-1))*(blockDim.y + (K-1))*C;
-    __shared__ unsigned char sMem[dimTile];
+    int dimTile = (blockDim.x + (K-1))*(blockDim.y + (K-1));
+
+    extern __shared__ unsigned char sMem[];
 
 
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    int tileOffset = ((blockDim.x + (K-1))*(blockDim.y + (K-1)))/(blockDim.x*blockDim.y);
+
+    for (int i=0; i<tileOffset; i++) {
+        int lTile = threadIdx.x +threadIdx.y*blockDim.y + i*blockDim.x*blockDim.y;
+
+        if (lTile >= dimTile){continue;}
+
+        int tileX = lTile % (blockDim.x + (K-1));
+        int tileY = lTile / (blockDim.x + (K-1));
+
+        int srcX = tileX + blockDim.x * blockIdx.x - center;
+        int srcY = tileY + blockDim.y * blockIdx.y - center;
+
+        //linearization
+        int src = srcX + srcY * W;
+
+        //copying in shared memory
+        for (int c=0; c<C; c++) {
+            unsigned char data = 0;
+
+            if (srcX < W && srcY < H && srcX >= 0 && srcY >= 0) {
+                data = in[src*C + c]; //because everything is linearized and we have to consider channel stride
+            }
+            sMem[lTile*C + c] = data;
+        }
+
+    }
+
+    __syncthreads();
 
     if (x >= W || y >= H) {return;}
 
@@ -22,15 +53,13 @@ __global__  void applyCudaKernel(unsigned char* in, unsigned char* out, float* k
         float result = 0;
         for (int i = 0; i < K; i++) {
             for (int j = 0; j < K; j++) {
-                const int xIdx = j - center + x;
-                const int yIdx = i - center + y;
-                if (!(xIdx < 0 || xIdx >= W || yIdx < 0 || yIdx >= H)) {
-                    const int inputIdx = yIdx * W * C + xIdx * C + c;
-                    result += kernel[i * K + j] * in[inputIdx];
-                }
+                const int xIdx = j + threadIdx.x;;
+                const int yIdx = i + threadIdx.y;;
+
+                const int inputIdx = (yIdx * (blockDim.x + (K-1)) + xIdx) * C + c;
+                result += kernel[i * K + j] * sMem[inputIdx];
             }
         }
         out[y * W * C + x * C + c] = cudaClamping(result);
     }
-
 }

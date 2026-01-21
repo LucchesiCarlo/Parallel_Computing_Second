@@ -41,6 +41,12 @@ target_link_libraries(ParallelKernel ${OpenCV_LIBS} )
 add_executable(ParallelImg parallel_main.cpp)
 target_link_libraries(ParallelImg ${OpenCV_LIBS} )
 
+add_executable(Cuda cuda_main.cu cuda_kernel.cu)
+target_link_libraries(Cuda ${OpenCV_LIBS})
+
+add_executable(CudaTile cuda_main.cu cuda_kernel_tiling.cu)
+target_link_libraries(CudaTile ${OpenCV_LIBS})
+
 ### Test Sources ###
 add_executable(SequentialTest test_sequential_main.cpp)
 target_link_libraries(SequentialTest ${OpenCV_LIBS} )
@@ -48,7 +54,6 @@ target_link_libraries(SequentialTest ${OpenCV_LIBS} )
 add_executable(ParallelTest test_parallel_main.cpp)
 target_link_libraries(ParallelTest ${OpenCV_LIBS} )
 
-add_executable(CudaTest cuda_main.cu cuda_kernel.cu)
-target_link_libraries(CudaTest ${OpenCV_LIBS})
+
 # to optimize for the specific GPU architecture
 #set_property(TARGET Second_Assignment PROPERTY CUDA_ARCHITECTURES native)

@@ -79,8 +79,10 @@ int main() {
 
         auto start_k = std::chrono::high_resolution_clock::now();
 
+        int dimTile = (dimBlock.x + (K-1))*(dimBlock.y + (K-1))*C;
+
         // the third parameter in <<< >>> is ignored if the shared memory is not allocated
-        applyCudaKernel <<<dimGrid, dimBlock, 25>>> (deviceInput, deviceOutput, cuda_kernel, K, size.width, size.height, inputImg.channels());
+        applyCudaKernel <<<dimGrid, dimBlock, dimTile>>> (deviceInput, deviceOutput, cuda_kernel, K, size.width, size.height, inputImg.channels());
         cudaDeviceSynchronize();
         auto end_k = std::chrono::high_resolution_clock::now();
         total_k += std::chrono::duration_cast<std::chrono::duration<double>>(end_k - start_k).count();
