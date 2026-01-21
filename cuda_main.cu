@@ -27,23 +27,20 @@ do { \
     } \
 } while (0)
 
-#define MAX_K 7
+
 #define MAX_W 150
 #define MAX_H 150
 #define K 3
 #define C 3
 
-__constant__ float cuda_kernel[MAX_K*MAX_K];
-
 int main() {
-
-
 
     auto start_e2e = std::chrono::high_resolution_clock::now();
 
     float kernel[K*K];
     generateKernel(kernel, Gaussian);
-    cudaMemcpy(cuda_kernel, kernel, sizeof(float)*K*K, cudaMemcpyKind::cudaMemcpyHostToDevice);
+
+    loadKernel(kernel, K);
 
     unsigned char * deviceInput;
     unsigned char * deviceOutput;
@@ -82,7 +79,7 @@ int main() {
         int dimTile = (dimBlock.x + (K-1))*(dimBlock.y + (K-1))*C;
 
         // the third parameter in <<< >>> is ignored if the shared memory is not allocated
-        applyCudaKernel <<<dimGrid, dimBlock, dimTile>>> (deviceInput, deviceOutput, cuda_kernel, K, size.width, size.height, inputImg.channels());
+        applyCudaKernel <<<dimGrid, dimBlock, dimTile>>> (deviceInput, deviceOutput, K, size.width, size.height, inputImg.channels());
         cudaDeviceSynchronize();
         auto end_k = std::chrono::high_resolution_clock::now();
         total_k += std::chrono::duration_cast<std::chrono::duration<double>>(end_k - start_k).count();
@@ -90,7 +87,7 @@ int main() {
 
         cudaMemcpy(outputPtr, deviceOutput, sizeof(unsigned char)*size.height*size.width*inputImg.channels(), cudaMemcpyKind::cudaMemcpyDeviceToHost);
 
-        std::string outputPath = "../cuda_output/" + entry.path().filename().string();
+        std::string outputPath = "../cuda_tiling_output/" + entry.path().filename().string();
         cv::imwrite(outputPath, outputImg);
 
     }

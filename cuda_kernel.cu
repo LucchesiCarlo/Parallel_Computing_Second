@@ -4,9 +4,13 @@
 
 
 #include "src/cuda_kernel.cuh"
+__constant__ float cuda_kernel[MAX_K*MAX_K];
+__host__ void loadKernel(float* kernel, int K) {
 
+    cudaMemcpyToSymbol(cuda_kernel, kernel, sizeof(float)*K*K);
+}
 
-__global__  void applyCudaKernel(unsigned char* in, unsigned char* out, float* kernel, int K, int W, int H, int C) {
+__global__  void applyCudaKernel(unsigned char* in, unsigned char* out, int K, int W, int H, int C) {
     int center = K / 2;
 
     int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -22,7 +26,7 @@ __global__  void applyCudaKernel(unsigned char* in, unsigned char* out, float* k
                 const int yIdx = i - center + y;
                 if (!(xIdx < 0 || xIdx >= W || yIdx < 0 || yIdx >= H)) {
                     const int inputIdx = yIdx * W * C + xIdx * C + c;
-                    result += kernel[i * K + j] * in[inputIdx];
+                    result += cuda_kernel[i * K + j] * in[inputIdx];
                 }
             }
         }

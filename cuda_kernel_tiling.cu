@@ -5,8 +5,14 @@
 
 #include "src/cuda_kernel.cuh"
 
+__constant__ float cuda_kernel[MAX_K*MAX_K];
+__host__ void loadKernel(float* kernel, int K) {
 
-__global__  void applyCudaKernel(unsigned char* in, unsigned char* out, float* kernel, int K, int W, int H, int C) {
+    cudaMemcpyToSymbol(cuda_kernel, kernel, sizeof(float)*K*K);
+}
+
+
+__global__  void applyCudaKernel(unsigned char* in, unsigned char* out, int K, int W, int H, int C) {
 
     int center = K / 2;
     int dimTile = (blockDim.x + (K-1))*(blockDim.y + (K-1));
@@ -17,10 +23,10 @@ __global__  void applyCudaKernel(unsigned char* in, unsigned char* out, float* k
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-    int tileOffset = ((blockDim.x + (K-1))*(blockDim.y + (K-1)))/(blockDim.x*blockDim.y);
+    int tileOffset = dimTile/(blockDim.x*blockDim.y);
 
-    for (int i=0; i<tileOffset; i++) {
-        int lTile = threadIdx.x +threadIdx.y*blockDim.y + i*blockDim.x*blockDim.y;
+    for (int i=0; i<=tileOffset; i++) {
+        int lTile = threadIdx.x +threadIdx.y*blockDim.x + i*blockDim.x*blockDim.y;
 
         if (lTile >= dimTile){continue;}
 
@@ -53,11 +59,11 @@ __global__  void applyCudaKernel(unsigned char* in, unsigned char* out, float* k
         float result = 0;
         for (int i = 0; i < K; i++) {
             for (int j = 0; j < K; j++) {
-                const int xIdx = j + threadIdx.x;;
-                const int yIdx = i + threadIdx.y;;
+                const int xIdx = j + threadIdx.x;
+                const int yIdx = i + threadIdx.y;
 
                 const int inputIdx = (yIdx * (blockDim.x + (K-1)) + xIdx) * C + c;
-                result += kernel[i * K + j] * sMem[inputIdx];
+                result += cuda_kernel[i * K + j] * sMem[inputIdx];
             }
         }
         out[y * W * C + x * C + c] = cudaClamping(result);
