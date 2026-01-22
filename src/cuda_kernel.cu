@@ -3,7 +3,7 @@
 //
 
 
-#include "src/cuda_kernel.cuh"
+#include "cuda_kernel.cuh"
 __constant__ float cuda_kernel[MAX_K*MAX_K];
 __host__ void loadKernel(float* kernel, int K) {
 

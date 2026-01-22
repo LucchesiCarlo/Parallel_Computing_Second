@@ -20,7 +20,7 @@ int main() {
     float kernel[9];
     generateKernel(kernel, Gaussian);
 
-    std::string path = "../dataset/seg_pred/seg_pred";
+    std::string path = "../dataset_150x150/seg_pred/seg_pred";
     int count = 0;
 
     double total_k = 0;

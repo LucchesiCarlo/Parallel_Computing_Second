@@ -1,4 +1,4 @@
-dataset/
+dataset_150x150/
 *.png
 *.jpg
 !input.png

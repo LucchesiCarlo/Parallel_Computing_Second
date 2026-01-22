@@ -9,7 +9,8 @@ enum KernelType {
     Gaussian,
     Ridge,
     Sharpen,
-    Identity
+    Identity,
+    Gaussian7
 };
 
 inline void generateKernel(float *kernel, KernelType type) {
@@ -33,6 +34,11 @@ inline void generateKernel(float *kernel, KernelType type) {
             kernel[3] = -1;
             kernel[5] = -1;
             kernel[7] = -1;
+            break;
+        case Gaussian7:
+            for (int i = 0; i < 49; i++) {
+                kernel[i] = 1.f / 49.f;
+            }
             break;
         case Identity:
         default:

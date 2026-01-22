@@ -20,10 +20,10 @@ int main() {
 
     auto start_e2e = std::chrono::high_resolution_clock::now();
 
-    float kernel[9];
-    generateKernel(kernel, Gaussian);
+    float kernel[49];
+    generateKernel(kernel, Gaussian7);
 
-    std::string path = "../dataset/seg_pred/seg_pred";
+    std::string path = "../dataset_150x150/seg_pred/seg_pred";
 
 
     double total_k = 0;
@@ -49,7 +49,7 @@ int main() {
         auto outputPtr = outputImg.ptr();
 
         auto start_k = std::chrono::high_resolution_clock::now();
-        applyKernel<3>(inputPtr, outputPtr, kernel, size.width, size.height, inputImg.channels());
+        applyKernel<7>(inputPtr, outputPtr, kernel, size.width, size.height, inputImg.channels());
         auto end_k = std::chrono::high_resolution_clock::now();
 
         auto temp = std::chrono::duration_cast<std::chrono::duration<double>>(end_k - start_k).count();
