@@ -31,30 +31,34 @@ do { \
 
 #define MAX_W 1024
 #define MAX_H 1024
-#define K 7
 #define C 3
 
-int main() {
+int main(int argc, char* argv[]) {
+    Config cfg;
+
+    cfg.parse(argc, argv);
+
+    omp_set_num_threads(cfg.threads);
+
     auto start_e2e = std::chrono::high_resolution_clock::now();
 
-    float kernel[K*K];
-    generateKernel(kernel, Gaussian7);
+    float kernel[MAX_K*MAX_K];
+    generateKernel(kernel, cfg.kernelType);
 
-    loadKernel(kernel, K);
+    loadKernel(kernel, cfg.K);
 
     unsigned char * deviceInput;
     unsigned char * deviceOutput;
 
-    cudaMalloc(&deviceInput, MAX_W*MAX_H*sizeof(unsigned char)*C);
-    cudaMalloc(&deviceOutput, MAX_W*MAX_H*sizeof(unsigned char)*C);
+    CUDA_CHECK(cudaMalloc(&deviceInput, MAX_W*MAX_H*sizeof(unsigned char)*C));
+    CUDA_CHECK(cudaMalloc(&deviceOutput, MAX_W*MAX_H*sizeof(unsigned char)*C));
 
     //we choose blocks 32x4. So, to cover all the images 150*150 we need a grid 5x38
     //for 1024x1024 we choose blocks 32x4, so a grid 32x256
-    dim3 dimGrid(5,38);
+
     dim3 dimBlock(32,4);
 
-    std::string path = "../dataset_150x150/seg_pred/seg_pred";
-    int count = 0;
+    std::string path = cfg.datasetPath;
 
     double total_k = 0;
 
@@ -63,22 +67,22 @@ int main() {
         imgList.push_back(entry.path());
     }
 
+    cv::Size size;
 
+    omp_set_num_threads(cfg.threads);
 
-    int N = 4;
-    omp_set_num_threads(N);
-
-#pragma omp parallel
+#pragma omp parallel default(none) num_threads(cfg.threads)
     {
         cudaStream_t st;
         int id = omp_get_thread_num();
 
         unsigned char* inputPinned;
         unsigned char* outputPinned;
-        cudaMallocHost(&inputPinned, MAX_W*MAX_H*sizeof(unsigned char)*C);
-        cudaMallocHost(&outputPinned, MAX_W*MAX_H*sizeof(unsigned char)*C);
 
-        for (int i = id; i < imgList.size(); i += N) {
+        CUDA_CHECK(cudaMallocHost(&inputPinned, MAX_W*MAX_H*sizeof(unsigned char)*C));
+        CUDA_CHECK(cudaMallocHost(&outputPinned, MAX_W*MAX_H*sizeof(unsigned char)*C));
+
+        for (int i = id; i < imgList.size(); i += cfg.threads) {
 
             cv::Mat inputImg = cv::imread(imgList[i], cv::IMREAD_UNCHANGED);
 
@@ -86,7 +90,9 @@ int main() {
                 continue;
             }
 
-            cv::Size size = inputImg.size();
+            size = inputImg.size();
+
+            dim3 dimGrid((size.width/dimBlock.x)+1,(size.height/dimBlock.y)+1);
 
             //Access raw bytes of the image
             auto inputPtr = inputImg.ptr();
@@ -99,14 +105,14 @@ int main() {
 
             auto start_k = std::chrono::high_resolution_clock::now();
 
-            cudaMemcpyAsync(deviceInput, inputPinned, sizeof(unsigned char)*size.height*size.width*inputImg.channels(), cudaMemcpyKind::cudaMemcpyHostToDevice, st);
+            CUDA_CHECK(cudaMemcpyAsync(deviceInput, inputPinned, sizeof(unsigned char)*size.height*size.width*inputImg.channels(), cudaMemcpyKind::cudaMemcpyHostToDevice, st));
 
-            int dimTile = (dimBlock.x + (K-1))*(dimBlock.y + (K-1))*C;
+            int dimTile = (dimBlock.x + (cfg.K-1))*(dimBlock.y + (cfg.K-1))*inputImg.channels();
 
             // the third parameter in <<< >>> is ignored if the shared memory is not allocated
-            applyCudaKernel <<<dimGrid, dimBlock, dimTile, st>>> (deviceInput, deviceOutput, K, size.width, size.height, inputImg.channels());
-            cudaMemcpyAsync(outputPinned, deviceOutput, sizeof(unsigned char)*size.height*size.width*inputImg.channels(), cudaMemcpyKind::cudaMemcpyDeviceToHost, st);
-            cudaStreamSynchronize(st);
+            applyCudaKernel <<<dimGrid, dimBlock, dimTile, st>>> (deviceInput, deviceOutput, cfg.K, size.width, size.height, inputImg.channels());
+            CUDA_CHECK(cudaMemcpyAsync(outputPinned, deviceOutput, sizeof(unsigned char)*size.height*size.width*inputImg.channels(), cudaMemcpyKind::cudaMemcpyDeviceToHost, st));
+            CUDA_CHECK(cudaStreamSynchronize(st));
             auto end_k = std::chrono::high_resolution_clock::now();
 
 
@@ -114,15 +120,15 @@ int main() {
 #pragma omp atomic
             total_k += temp;
 
-            memcpy(outputPtr, outputPinned, sizeof(unsigned char)*size.width*size.height*C);
+            memcpy(outputPtr, outputPinned, sizeof(unsigned char)*size.width*size.height*inputImg.channels());
 
-            std::string outputPath = "../cuda_output_150_7.3k/" + imgList[i].filename().string();
+            std::string outputPath = "../cuda_output_" + std::to_string(size.width) + "_" + "k=" + std::to_string(cfg.K) + "/" + imgList[i].filename().string();
             cv::imwrite(outputPath, outputImg);
         }
-        cudaFree(deviceInput);
-        cudaFree(deviceOutput);
-        cudaFree(inputPinned);
-        cudaFree(outputPinned);
+        CUDA_CHECK(cudaFree(deviceInput));
+        CUDA_CHECK(cudaFree(deviceOutput));
+        CUDA_CHECK(cudaFreeHost(inputPinned));
+        CUDA_CHECK(cudaFreeHost(outputPinned));
     }
     auto end_e2e = std::chrono::high_resolution_clock::now();
     auto time_e2e = std::chrono::duration_cast<std::chrono::duration<double>>(end_e2e - start_e2e).count();
@@ -130,4 +136,6 @@ int main() {
     std::cout << "Time Taken End to End:" << time_e2e << "s" << std::endl;
     std::cout << "Time Taken to apply kernel:" << total_k/imgList.size() << "s" << std::endl;
     std::cout << "Elements Elaborated:" << imgList.size() << std::endl;
+
+    append_csv(cfg, size.width, imgList.size(), total_k/imgList.size(), time_e2e, cfg.outputPath);
 }

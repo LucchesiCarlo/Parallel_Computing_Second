@@ -5,6 +5,9 @@
 #ifndef SECOND_ASSIGNMENT_KERNEL_FUNCTIONS_H
 #define SECOND_ASSIGNMENT_KERNEL_FUNCTIONS_H
 
+#define MAX_K 7
+
+
 enum KernelType {
     Gaussian,
     Ridge,
@@ -12,6 +15,50 @@ enum KernelType {
     Identity,
     Gaussian7
 };
+
+struct Config {
+
+    std::string datasetPath;
+    int threads = 4;
+    KernelType kernelType = Gaussian;
+    std::string outputPath;
+    int K = 3;
+    bool first = true;
+
+
+    //Parsing params passed via python
+    void parse(int argc, char* argv[]) {
+        for (int i = 1; i < argc; ++i) { //i = 1 because for i=0 we always have the exe path
+            std::string arg = argv[i];
+            if (arg == "--d" && i + 1 < argc) {
+                datasetPath = argv[++i];
+            }else if (arg == "--threads" && i + 1 < argc) {
+                threads = std::stoi(argv[++i]);
+            } else if (arg == "--type" && i + 1 < argc) {
+                std::string stringType = argv[++i];
+               if (stringType == "Gaussian") {
+                   kernelType = Gaussian;
+               }else if (stringType == "Ridge") {
+                   kernelType = Ridge;
+               }else if (stringType == "Sharpen") {
+                   kernelType = Sharpen;
+               }else if (stringType == "Identity") {
+                   kernelType = Identity;
+               }else if (stringType == "Gaussian7") {
+                   kernelType = Gaussian7;
+                   K = 7;
+               }
+            }else if (arg == "--output" && i + 1 < argc) {
+                outputPath = argv[++i];
+            }
+            else {
+                std::cerr << "Unknown argument: " << arg << std::endl;
+            }
+        }
+    }
+};
+
+
 
 inline void generateKernel(float *kernel, KernelType type) {
     switch (type) {
@@ -54,6 +101,26 @@ inline unsigned char clamping(float x) {
     if (x > 255.0f) x = 255.0f;
     x = std::roundf(x);
     return static_cast<unsigned char> (x);
+}
+
+void append_csv(Config cfg, int dim_images, int num_images,double time_k, double time_e2e, std::string filename)
+{
+
+    auto exist = std::filesystem::exists(filename);
+
+    std::ofstream out(filename, std::ios::app);
+
+    if (!exist) {
+        out << "N_threads,Kernel_size,dim_images,num_images,time_k,time_e2e\n";
+        cfg.first = false;
+    }
+
+    out << cfg.threads << ","
+        << cfg.K << ","
+        << dim_images << ","
+        << num_images << ","
+        << time_k << ","
+        << time_e2e << "\n";
 }
 
 #endif //SECOND_ASSIGNMENT_KERNEL_FUNCTIONS_H

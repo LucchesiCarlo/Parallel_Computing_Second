@@ -14,16 +14,19 @@ namespace fs = std::filesystem;
 #include "src/sequential_kernel.h"
 #include <omp.h>
 
-int main() {
+int main(int argc, char* argv[]) {
+    Config cfg;
 
-    omp_set_num_threads(4);
+    cfg.parse(argc, argv);
+
+    omp_set_num_threads(cfg.threads);
 
     auto start_e2e = std::chrono::high_resolution_clock::now();
 
-    float kernel[49];
-    generateKernel(kernel, Gaussian7);
+    float kernel[MAX_K*MAX_K];
+    generateKernel(kernel, cfg.kernelType);
 
-    std::string path = "../dataset_150x150/seg_pred/seg_pred";
+    std::string path = cfg.datasetPath;
 
 
     double total_k = 0;
@@ -33,7 +36,9 @@ int main() {
         imgList.push_back(entry.path());
     }
 
-#pragma omp parallel for default(none) shared(imgList, kernel, total_k)
+    cv::Size size;
+
+#pragma omp parallel for default(none) shared(imgList, kernel, total_k, cfg, size)
     for (int i=0; i<imgList.size(); i++) {
         cv::Mat inputImg = cv::imread(imgList[i], cv::IMREAD_UNCHANGED);
         cv::Mat outputImg = cv::Mat::zeros(inputImg.size(), inputImg.type());
@@ -42,14 +47,14 @@ int main() {
             continue;
         }
 
-        cv::Size size = inputImg.size();
+        size = inputImg.size();
 
         //Access raw bytes of the image
         auto inputPtr = inputImg.ptr();
         auto outputPtr = outputImg.ptr();
 
         auto start_k = std::chrono::high_resolution_clock::now();
-        applyKernel<7>(inputPtr, outputPtr, kernel, size.width, size.height, inputImg.channels());
+        applyKernel(inputPtr, outputPtr, kernel, cfg.K, size.width, size.height, inputImg.channels());
         auto end_k = std::chrono::high_resolution_clock::now();
 
         auto temp = std::chrono::duration_cast<std::chrono::duration<double>>(end_k - start_k).count();
@@ -69,5 +74,7 @@ int main() {
     std::cout << "Time Taken End to End:" << time_e2e << "s" << std::endl;
     std::cout << "Time Taken to apply kernel:" << total_k/imgList.size() << "s" << std::endl;
     std::cout << "Elements Elaborated:" << imgList.size() << std::endl;
+
+    append_csv(cfg, size.width, imgList.size(), total_k/imgList.size(), time_e2e, cfg.outputPath);
 
 }

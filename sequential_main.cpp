@@ -11,18 +11,23 @@ namespace fs = std::filesystem;
 #include <omp.h>
 
 
-int main() {
+int main(int argc, char* argv[]) {
 
-    omp_set_num_threads(4);
+    Config cfg;
+
+    cfg.parse(argc, argv);
+
+    omp_set_num_threads(cfg.threads);
 
     auto start_e2e = std::chrono::high_resolution_clock::now();
 
-    float kernel[9];
-    generateKernel(kernel, Gaussian);
+    float kernel[MAX_K*MAX_K];
+    generateKernel(kernel, cfg.kernelType);
 
-    std::string path = "../dataset_150x150/seg_pred/seg_pred";
+    std::string path = cfg.datasetPath;
+
     int count = 0;
-
+    cv::Size size;
     double total_k = 0;
     for (const auto & entry : fs::directory_iterator(path)) {
         cv::Mat inputImg = cv::imread(entry.path(), cv::IMREAD_UNCHANGED);
@@ -32,7 +37,7 @@ int main() {
             continue;
         }
 
-        cv::Size size = inputImg.size();
+        size = inputImg.size();
 
         //Access raw bytes of the image
         auto inputPtr = inputImg.ptr();
@@ -40,7 +45,7 @@ int main() {
 
         auto start_k = std::chrono::high_resolution_clock::now();
 
-        applyKernel<3>(inputPtr, outputPtr, kernel, size.width, size.height, inputImg.channels());
+        applyKernel(inputPtr, outputPtr, kernel, cfg.K, size.width, size.height, inputImg.channels());
 
         auto end_k = std::chrono::high_resolution_clock::now();
         total_k += std::chrono::duration_cast<std::chrono::duration<double>>(end_k - start_k).count();
@@ -56,4 +61,6 @@ int main() {
     std::cout << "Time Taken End to End:" << time_e2e << "s" << std::endl;
     std::cout << "Time Taken to apply kernel:" << total_k/count << "s" << std::endl;
     std::cout << "Elements Elaborated:" << count << std::endl;
+
+    append_csv(cfg, size.width, count, total_k/count, time_e2e, cfg.outputPath);
 }

@@ -6,10 +6,10 @@
 #define SECOND_ASSIGNMENT_PARALLEL_KERNEL_H
 #include "kernel_functions.h"
 
-template <int K> void applyKernel(unsigned char* in, unsigned char* out, float* kernel, int W, int H, int C) {
+void applyKernel(unsigned char* in, unsigned char* out, float* kernel, int K, int W, int H, int C) {
     int center = K / 2;
 
-#pragma omp parallel for default(none) shared(in, out, kernel, center, W, H, C)
+#pragma omp parallel for default(none) shared(in, out, kernel, center, W, H, C, K)
 
     for (int y = 0; y < H; y++){
         for (int x = 0; x < W; x++) {
