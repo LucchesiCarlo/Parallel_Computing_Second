@@ -34,7 +34,6 @@ do { \
 #define C 3
 
 int main() {
-
     auto start_e2e = std::chrono::high_resolution_clock::now();
 
     float kernel[K*K];
@@ -63,7 +62,6 @@ int main() {
         //Access raw bytes of the image
         auto inputPtr = inputImg.ptr();
 
-
         cudaMemcpy(deviceInput, inputPtr, sizeof(unsigned char)*size.height*size.width*inputImg.channels(), cudaMemcpyKind::cudaMemcpyHostToDevice);
 
         cv::Mat outputImg = cv::Mat::zeros(inputImg.size(), inputImg.type());
@@ -89,18 +87,14 @@ int main() {
 
         std::string outputPath = "../cuda_tiling_output/" + entry.path().filename().string();
         cv::imwrite(outputPath, outputImg);
-
     }
-
     cudaFree(deviceInput);
     cudaFree(deviceOutput);
 
     auto end_e2e = std::chrono::high_resolution_clock::now();
     auto time_e2e = std::chrono::duration_cast<std::chrono::duration<double>>(end_e2e - start_e2e).count();
 
-
     std::cout << "Time Taken End to End:" << time_e2e << "s" << std::endl;
     std::cout << "Time Taken to apply kernel:" << total_k/count << "s" << std::endl;
     std::cout << "Elements Elaborated:" << count << std::endl;
-
 }

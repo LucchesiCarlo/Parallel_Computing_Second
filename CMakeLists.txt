@@ -41,10 +41,10 @@ target_link_libraries(ParallelKernel ${OpenCV_LIBS} )
 add_executable(ParallelImg parallel_main.cpp)
 target_link_libraries(ParallelImg ${OpenCV_LIBS} )
 
-add_executable(Cuda cuda_main.cu cuda_kernel.cu)
+add_executable(Cuda cuda_main.cu src/cuda_kernel.cu)
 target_link_libraries(Cuda ${OpenCV_LIBS})
 
-add_executable(CudaTile cuda_main.cu cuda_kernel_tiling.cu)
+add_executable(CudaTile cuda_main.cu src/cuda_kernel_tiling.cu)
 target_link_libraries(CudaTile ${OpenCV_LIBS})
 
 ### Test Sources ###

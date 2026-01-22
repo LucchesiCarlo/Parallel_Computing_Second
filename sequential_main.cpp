@@ -49,15 +49,11 @@ int main() {
 
         std::string outputPath = "../parallel_output/" + entry.path().filename().string();
         cv::imwrite(outputPath, outputImg);
-
     }
-
     auto end_e2e = std::chrono::high_resolution_clock::now();
     auto time_e2e = std::chrono::duration_cast<std::chrono::duration<double>>(end_e2e - start_e2e).count();
-
 
     std::cout << "Time Taken End to End:" << time_e2e << "s" << std::endl;
     std::cout << "Time Taken to apply kernel:" << total_k/count << "s" << std::endl;
     std::cout << "Elements Elaborated:" << count << std::endl;
-
 }

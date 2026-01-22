@@ -32,7 +32,7 @@ int main() {
     for (const auto & entry : fs::directory_iterator(path)) {
         imgList.push_back(entry.path());
     }
-    omp_set_max_active_levels(1);
+
 #pragma omp parallel for default(none) shared(imgList, kernel, total_k)
     for (int i=0; i<imgList.size(); i++) {
         cv::Mat inputImg = cv::imread(imgList[i], cv::IMREAD_UNCHANGED);

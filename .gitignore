@@ -1,2 +1,9 @@
 dataset/
-output.png
+*.png
+*.jpg
+!input.png
+!input.jpg
+parallel_output/
+parallel_image_output/
+cuda_output/
+cuda_tiling_output/
