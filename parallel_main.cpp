@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
         auto temp = std::chrono::duration_cast<std::chrono::duration<double>>(end_k - start_k).count();
 
 
-        std::string outputPath = "../parallel_image_output/" + imgList[i].filename().string();
+        std::string outputPath = "../omp_output/" + imgList[i].filename().string();
         cv::imwrite(outputPath, outputImg);
 #pragma omp atomic
         total_k += temp;

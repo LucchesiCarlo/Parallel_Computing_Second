@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
 
         count++;
 
-        std::string outputPath = "../parallel_output/" + entry.path().filename().string();
+        std::string outputPath = "../omp_output/" + entry.path().filename().string();
         cv::imwrite(outputPath, outputImg);
     }
     auto end_e2e = std::chrono::high_resolution_clock::now();
