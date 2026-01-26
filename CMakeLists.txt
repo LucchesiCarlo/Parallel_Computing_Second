@@ -52,6 +52,9 @@ target_link_libraries(Cuda ${OpenCV_LIBS} OpenMP::OpenMP_CXX)
 add_executable(CudaTile cuda_main.cu src/cuda_kernel_tiling.cu)
 target_link_libraries(CudaTile ${OpenCV_LIBS} OpenMP::OpenMP_CXX)
 
+add_executable(CudaBatch cuda_main_batch.cu src/cuda_kernel_batch.cu)
+target_link_libraries(CudaBatch ${OpenCV_LIBS} OpenMP::OpenMP_CXX)
+
 ### Test Sources ###
 add_executable(SequentialTest test_sequential_main.cpp)
 target_link_libraries(SequentialTest ${OpenCV_LIBS} )

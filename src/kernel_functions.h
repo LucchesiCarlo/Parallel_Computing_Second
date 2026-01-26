@@ -5,7 +5,15 @@
 #ifndef SECOND_ASSIGNMENT_KERNEL_FUNCTIONS_H
 #define SECOND_ASSIGNMENT_KERNEL_FUNCTIONS_H
 
+#include <string>
+#include <iostream>
+#include <filesystem>
+#include <fstream>
+
 #define MAX_K 7
+#define MAX_W 1024
+#define MAX_H 1024
+#define MAX_C 3
 
 enum KernelType {
     Gaussian,
@@ -102,7 +110,7 @@ inline unsigned char clamping(float x) {
     return static_cast<unsigned char> (x);
 }
 
-void append_csv(Config cfg, int dim_images, int num_images,double time_k, double time_e2e, std::string filename)
+inline void append_csv(Config cfg, int dim_images, int num_images,double time_k, double time_e2e, std::string filename)
 {
 
     auto exist = std::filesystem::exists(filename);
