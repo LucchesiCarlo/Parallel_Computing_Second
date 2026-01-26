@@ -7,7 +7,6 @@
 
 #define MAX_K 7
 
-
 enum KernelType {
     Gaussian,
     Ridge,
