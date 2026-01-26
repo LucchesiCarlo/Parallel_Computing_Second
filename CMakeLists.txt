@@ -35,6 +35,10 @@ elseif (CMAKE_BUILD_TYPE STREQUAL "Release")
     add_compile_options("-ffast-math")
 endif()
 
+If (OPENMP_FOUND)
+set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${OpenMP_CXX_FLAGS}")
+endif()
+
 add_executable(ParallelKernel sequential_main.cpp)
 target_link_libraries(ParallelKernel ${OpenCV_LIBS} )
 

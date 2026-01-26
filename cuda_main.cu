@@ -47,12 +47,6 @@ int main(int argc, char* argv[]) {
 
     loadKernel(kernel, cfg.K);
 
-    unsigned char * deviceInput;
-    unsigned char * deviceOutput;
-
-    CUDA_CHECK(cudaMalloc(&deviceInput, MAX_W*MAX_H*sizeof(unsigned char)*C));
-    CUDA_CHECK(cudaMalloc(&deviceOutput, MAX_W*MAX_H*sizeof(unsigned char)*C));
-
     //we choose blocks 32x4. So, to cover all the images 150*150 we need a grid 5x38
     //for 1024x1024 we choose blocks 32x4, so a grid 32x256
 
@@ -69,12 +63,16 @@ int main(int argc, char* argv[]) {
 
     cv::Size size;
 
-    omp_set_num_threads(cfg.threads);
-
-#pragma omp parallel default(none) num_threads(cfg.threads)
+#pragma omp parallel default(none) shared(imgList, cfg, total_k, stderr, dimBlock, size)
     {
+
+        unsigned char * deviceInput;
+        unsigned char * deviceOutput;
+
+        CUDA_CHECK(cudaMalloc(&deviceInput, MAX_W*MAX_H*sizeof(unsigned char)*C));
+        CUDA_CHECK(cudaMalloc(&deviceOutput, MAX_W*MAX_H*sizeof(unsigned char)*C));
+
         cudaStream_t st;
-        int id = omp_get_thread_num();
 
         unsigned char* inputPinned;
         unsigned char* outputPinned;
@@ -82,7 +80,8 @@ int main(int argc, char* argv[]) {
         CUDA_CHECK(cudaMallocHost(&inputPinned, MAX_W*MAX_H*sizeof(unsigned char)*C));
         CUDA_CHECK(cudaMallocHost(&outputPinned, MAX_W*MAX_H*sizeof(unsigned char)*C));
 
-        for (int i = id; i < imgList.size(); i += cfg.threads) {
+#pragma omp for lastprivate(size)
+        for (int i = 0; i < imgList.size(); i++) {
 
             cv::Mat inputImg = cv::imread(imgList[i], cv::IMREAD_UNCHANGED);
 
