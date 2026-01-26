@@ -32,7 +32,7 @@ do { \
 
 
 
-#define BATCH_SIZE 64
+#define BATCH_SIZE 1000
 
 int main(int argc, char* argv[]) {
     Config cfg;
@@ -74,16 +74,18 @@ int main(int argc, char* argv[]) {
     CUDA_CHECK(cudaMalloc(&deviceInput, sizeof(unsigned char)*MAX_W*MAX_H*MAX_C*BATCH_SIZE));
     CUDA_CHECK(cudaMalloc(&deviceOutput, sizeof(unsigned char)*MAX_W*MAX_H*MAX_C*BATCH_SIZE));
 
+
     for (int i=0; i <= imgList.size()/BATCH_SIZE; i++) {
         int currentBatchSize=0;
-
-        for (int j=0; j<BATCH_SIZE; j++) {
+#pragma omp parallel for default(none) shared(imgList, currentBatchSize, i, batchPtr) lastprivate(size, imgType, channels)
+        for (long long j=0; j<BATCH_SIZE; j++) {
 
             int generalIndex= i*BATCH_SIZE + j;
 
             if (generalIndex >= imgList.size()) {
-                break ;
+                continue ;
             }
+#pragma omp atomic
             currentBatchSize++;
             cv::Mat inputImg = cv::imread(imgList[generalIndex], cv::IMREAD_UNCHANGED);
             size = inputImg.size();
@@ -94,16 +96,18 @@ int main(int argc, char* argv[]) {
 
         dim3 dimGrid((size.width/dimBlock.x)+1,(size.height/dimBlock.y)+1, currentBatchSize);
         cudaMemcpy(deviceInput, batchPtr, sizeof(unsigned char)*MAX_W*MAX_H*MAX_C*BATCH_SIZE, cudaMemcpyHostToDevice);
-
+        printf("Size width: %d \n", size.width);
+        printf("Size height: %d \n", size.height);
         applyCudaKernel <<<dimGrid, dimBlock>>> (deviceInput, deviceOutput, cfg.K, size.width, size.height, channels);
         cudaMemcpy(batchPtr, deviceOutput, sizeof(unsigned char)*MAX_W*MAX_H*MAX_C*BATCH_SIZE, cudaMemcpyDeviceToHost);
 
-        for (int j=0; j<currentBatchSize; j++) {
+#pragma omp parallel for default(none) shared(imgList, currentBatchSize, size, imgType, channels, i, cfg, batchPtr, deviceInput, deviceOutput)
+        for (long long j=0; j<currentBatchSize; j++) {
 
             int generalIndex= i*BATCH_SIZE + j;
 
             if (generalIndex >= imgList.size()) {
-                break ;
+                continue;
             }
 
             cv::Mat outputImg =  cv::Mat::zeros(size, imgType);

@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
 
 #pragma omp parallel default(none) shared(imgList, cfg, total_k, stderr, dimBlock, size)
     {
-
+        printf("Thread id: %d", omp_get_thread_num());
         unsigned char * deviceInput;
         unsigned char * deviceOutput;
 

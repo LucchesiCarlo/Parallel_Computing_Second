@@ -16,7 +16,7 @@ __global__  void applyCudaKernel(unsigned char* in, unsigned char* out, int K, i
 
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
-    long long offset = MAX_W*MAX_H*MAX_C*blockIdx.z;
+    size_t offset = MAX_W*MAX_H*MAX_C*blockIdx.z;
 
     if (x >= W || y >= H) {return;}
 
@@ -27,7 +27,7 @@ __global__  void applyCudaKernel(unsigned char* in, unsigned char* out, int K, i
                 const int xIdx = j - center + x;
                 const int yIdx = i - center + y;
                 if (!(xIdx < 0 || xIdx >= W || yIdx < 0 || yIdx >= H)) {
-                    const int inputIdx = yIdx * W * C + xIdx * C + c + offset;
+                    size_t inputIdx = yIdx * W * C + xIdx * C + c + offset;
                     result += cuda_kernel[i * K + j] * in[inputIdx];
                 }
             }

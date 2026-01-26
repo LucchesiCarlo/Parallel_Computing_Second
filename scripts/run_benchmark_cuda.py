@@ -5,16 +5,16 @@ import subprocess
 #experiments settings
 
 EXECUTABLES = {
-    "CudaBatch": "../cmake-build-release/CudaBatch",
+    "CudaTile": "../cmake-build-release/CudaTile",
 }
 
 
-dataset_path = "../dataset_150x150"
-Threads_values = [1]
+dataset_path = "../dataset_1024x1024"
+Threads_values = [4]
 N_experiments = 1
 kernel_type = "Gaussian"
 
-CSV_OUT = "CudaBatch_k=3_150x150.csv"
+CSV_OUT = "CudaTile_k=3_1024x1024.csv"
 
 def run_benchmarks(exe, dataset_path, n_threads, kernel_type, output_path):
 
