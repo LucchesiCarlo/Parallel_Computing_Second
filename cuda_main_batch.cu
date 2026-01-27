@@ -31,8 +31,8 @@ do { \
 } while (0)
 
 
-
-#define BATCH_SIZE 1000
+//Based on my GTX 1070 with 8GB VRAM
+#define BYTE_BATCH_SIZE 3145728000
 
 int main(int argc, char* argv[]) {
     Config cfg;
@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
     float kernel[MAX_K*MAX_K];
     generateKernel(kernel, cfg.kernelType);
 
-    loadKernel(kernel, cfg.K);
+    CUDA_CHECK(loadKernel(kernel, cfg.K));
 
     //we choose blocks 32x4. So, to cover all the images 150*150 we need a grid 5x38
     //for 1024x1024 we choose blocks 32x4, so a grid 32x256
@@ -55,29 +55,35 @@ int main(int argc, char* argv[]) {
 
     std::string path = cfg.datasetPath;
 
-    double total_k = 0;
-
     std::vector<std::filesystem::path> imgList;
     for (const auto & entry : fs::directory_iterator(path)) {
         imgList.push_back(entry.path());
     }
+    cv::Mat firstImg = cv::imread(imgList[0], cv::IMREAD_UNCHANGED);
+    cv::Size size = firstImg.size();;
+    int imgType = firstImg.type();
+    int channels = firstImg.channels();
+    
+    const int W = size.width;
+    const int H = size.height;
+    
 
-    cv::Size size;
-    int imgType;
-    int channels;
-
+    const size_t BATCH_SIZE = BYTE_BATCH_SIZE/(W*H*channels);
     unsigned char* batchPtr;
     unsigned char* deviceInput;
     unsigned char* deviceOutput;
 
-    CUDA_CHECK(cudaMallocHost(&batchPtr, sizeof(unsigned char)*MAX_W*MAX_H*MAX_C*BATCH_SIZE));
-    CUDA_CHECK(cudaMalloc(&deviceInput, sizeof(unsigned char)*MAX_W*MAX_H*MAX_C*BATCH_SIZE));
-    CUDA_CHECK(cudaMalloc(&deviceOutput, sizeof(unsigned char)*MAX_W*MAX_H*MAX_C*BATCH_SIZE));
+    CUDA_CHECK(cudaMallocHost(&batchPtr, sizeof(unsigned char)*W*H*channels*BATCH_SIZE));
+    CUDA_CHECK(cudaMalloc(&deviceInput, sizeof(unsigned char)*W*H*channels*BATCH_SIZE));
+    CUDA_CHECK(cudaMalloc(&deviceOutput, sizeof(unsigned char)*W*H*channels*BATCH_SIZE));
 
 
     for (int i=0; i <= imgList.size()/BATCH_SIZE; i++) {
+
         int currentBatchSize=0;
-#pragma omp parallel for default(none) shared(imgList, currentBatchSize, i, batchPtr) lastprivate(size, imgType, channels)
+
+#pragma omp parallel for default(none) shared(imgList, currentBatchSize, i, batchPtr, W, H, size, imgType, channels, BATCH_SIZE)
+
         for (long long j=0; j<BATCH_SIZE; j++) {
 
             int generalIndex= i*BATCH_SIZE + j;
@@ -85,23 +91,19 @@ int main(int argc, char* argv[]) {
             if (generalIndex >= imgList.size()) {
                 continue ;
             }
+
 #pragma omp atomic
             currentBatchSize++;
             cv::Mat inputImg = cv::imread(imgList[generalIndex], cv::IMREAD_UNCHANGED);
-            size = inputImg.size();
-            imgType = inputImg.type();
-            channels = inputImg.channels();
-            memcpy(batchPtr + j*sizeof(unsigned char)*MAX_W*MAX_H*MAX_C, inputImg.ptr(), sizeof(unsigned char)*size.area()*channels);
+            memcpy(batchPtr + j*sizeof(unsigned char)*W*H*channels, inputImg.ptr(), sizeof(unsigned char)*size.area()*channels);
         }
 
         dim3 dimGrid((size.width/dimBlock.x)+1,(size.height/dimBlock.y)+1, currentBatchSize);
-        cudaMemcpy(deviceInput, batchPtr, sizeof(unsigned char)*MAX_W*MAX_H*MAX_C*BATCH_SIZE, cudaMemcpyHostToDevice);
-        printf("Size width: %d \n", size.width);
-        printf("Size height: %d \n", size.height);
+        CUDA_CHECK(cudaMemcpy(deviceInput, batchPtr, sizeof(unsigned char)*W*H*channels*BATCH_SIZE, cudaMemcpyHostToDevice));
         applyCudaKernel <<<dimGrid, dimBlock>>> (deviceInput, deviceOutput, cfg.K, size.width, size.height, channels);
-        cudaMemcpy(batchPtr, deviceOutput, sizeof(unsigned char)*MAX_W*MAX_H*MAX_C*BATCH_SIZE, cudaMemcpyDeviceToHost);
+        CUDA_CHECK(cudaMemcpy(batchPtr, deviceOutput, sizeof(unsigned char)*W*H*channels*BATCH_SIZE, cudaMemcpyDeviceToHost));
 
-#pragma omp parallel for default(none) shared(imgList, currentBatchSize, size, imgType, channels, i, cfg, batchPtr, deviceInput, deviceOutput)
+#pragma omp parallel for default(none) shared(imgList, currentBatchSize, size, imgType, channels, i, cfg, batchPtr,W,H, BATCH_SIZE)
         for (long long j=0; j<currentBatchSize; j++) {
 
             int generalIndex= i*BATCH_SIZE + j;
@@ -111,7 +113,7 @@ int main(int argc, char* argv[]) {
             }
 
             cv::Mat outputImg =  cv::Mat::zeros(size, imgType);
-            memcpy(outputImg.ptr(), batchPtr + j*sizeof(unsigned char)*MAX_W*MAX_H*MAX_C, sizeof(unsigned char)*size.area()*channels);
+            memcpy(outputImg.ptr(), batchPtr + j*sizeof(unsigned char)*W*H*channels, sizeof(unsigned char)*size.area()*channels);
 
             std::string outputPath = "../cuda_output_" + std::to_string(size.width) + "_" + "k=" + std::to_string(cfg.K) + "/" + imgList[generalIndex].filename().string();
             cv::imwrite(outputPath, outputImg);

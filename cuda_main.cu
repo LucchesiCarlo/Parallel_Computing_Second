@@ -29,10 +29,6 @@ do { \
 } while (0)
 
 
-#define MAX_W 1024
-#define MAX_H 1024
-#define C 3
-
 int main(int argc, char* argv[]) {
     Config cfg;
 
@@ -65,20 +61,19 @@ int main(int argc, char* argv[]) {
 
 #pragma omp parallel default(none) shared(imgList, cfg, total_k, stderr, dimBlock, size)
     {
-        printf("Thread id: %d", omp_get_thread_num());
         unsigned char * deviceInput;
         unsigned char * deviceOutput;
 
-        CUDA_CHECK(cudaMalloc(&deviceInput, MAX_W*MAX_H*sizeof(unsigned char)*C));
-        CUDA_CHECK(cudaMalloc(&deviceOutput, MAX_W*MAX_H*sizeof(unsigned char)*C));
+        CUDA_CHECK(cudaMalloc(&deviceInput, MAX_W*MAX_H*sizeof(unsigned char)*MAX_C));
+        CUDA_CHECK(cudaMalloc(&deviceOutput, MAX_W*MAX_H*sizeof(unsigned char)*MAX_C));
 
         cudaStream_t st;
 
         unsigned char* inputPinned;
         unsigned char* outputPinned;
 
-        CUDA_CHECK(cudaMallocHost(&inputPinned, MAX_W*MAX_H*sizeof(unsigned char)*C));
-        CUDA_CHECK(cudaMallocHost(&outputPinned, MAX_W*MAX_H*sizeof(unsigned char)*C));
+        CUDA_CHECK(cudaMallocHost(&inputPinned, MAX_W*MAX_H*sizeof(unsigned char)*MAX_C));
+        CUDA_CHECK(cudaMallocHost(&outputPinned, MAX_W*MAX_H*sizeof(unsigned char)*MAX_C));
 
 #pragma omp for lastprivate(size)
         for (int i = 0; i < imgList.size(); i++) {
@@ -96,7 +91,7 @@ int main(int argc, char* argv[]) {
             //Access raw bytes of the image
             auto inputPtr = inputImg.ptr();
 
-            memcpy(inputPinned, inputPtr, sizeof(unsigned char)*size.width*size.height*C);
+            memcpy(inputPinned, inputPtr, sizeof(unsigned char)*size.width*size.height*MAX_C);
 
             cv::Mat outputImg = cv::Mat::zeros(inputImg.size(), inputImg.type());
 

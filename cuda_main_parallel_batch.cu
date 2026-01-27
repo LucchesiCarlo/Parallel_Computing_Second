@@ -32,15 +32,10 @@ do { \
 } while (0)
 
 
-// for 1024x1024
-//#define BATCH_SIZE 1000
-//for 150x150
-#define BATCH_SIZE 46000
+//Based on my GTX 1070 with 8GB VRAM
+#define BYTE_BATCH_SIZE 3145728000
 
 int main(int argc, char* argv[]) {
-
-    CUDA_CHECK(cudaSetDevice(0));
-
     Config cfg;
 
     cfg.parse(argc, argv);
@@ -68,17 +63,23 @@ int main(int argc, char* argv[]) {
         imgList.push_back(entry.path());
     }
 
-    cv::Size size;
-    int imgType;
-    int channels;
+    cv::Mat firstImg = cv::imread(imgList[0], cv::IMREAD_UNCHANGED);
+    cv::Size size = firstImg.size();;
+    int imgType = firstImg.type();
+    int channels = firstImg.channels();
+    
+    const int W = size.width;
+    const int H = size.height;
+    
 
+    const size_t BATCH_SIZE = BYTE_BATCH_SIZE/(W*H*channels);
     unsigned char* batchPtr;
     unsigned char* deviceInput;
     unsigned char* deviceOutput;
 
-    CUDA_CHECK(cudaMallocHost(&batchPtr, sizeof(unsigned char)*MAX_W*MAX_H*MAX_C*BATCH_SIZE));
-    CUDA_CHECK(cudaMalloc(&deviceInput, sizeof(unsigned char)*MAX_W*MAX_H*MAX_C*BATCH_SIZE));
-    CUDA_CHECK(cudaMalloc(&deviceOutput, sizeof(unsigned char)*MAX_W*MAX_H*MAX_C*BATCH_SIZE));
+    CUDA_CHECK(cudaMallocHost(&batchPtr, sizeof(unsigned char)*W*H*channels*BATCH_SIZE));
+    CUDA_CHECK(cudaMalloc(&deviceInput, sizeof(unsigned char)*W*H*channels*BATCH_SIZE));
+    CUDA_CHECK(cudaMalloc(&deviceOutput, sizeof(unsigned char)*W*H*channels*BATCH_SIZE));
 
     const int  threadBatchSize = BATCH_SIZE/cfg.threads;
     cudaStream_t streams[cfg.threads];
@@ -89,7 +90,7 @@ int main(int argc, char* argv[]) {
     }
 
 
-#pragma omp parallel for default(none) shared(imgList, batchPtr, threadBatchSize, dimBlock, streams, deviceInput, deviceOutput) firstprivate(cfg, stderr) lastprivate(size, imgType, channels)
+#pragma omp parallel for default(none) shared(imgList, batchPtr, threadBatchSize, dimBlock, streams, deviceInput, deviceOutput, W, H, size, imgType, channels, cfg) firstprivate(stderr)
     for (int i=0; i <= imgList.size()/threadBatchSize; i++) {
 
         int currentBatchSize=0;
@@ -105,18 +106,13 @@ int main(int argc, char* argv[]) {
 
             currentBatchSize++;
             cv::Mat inputImg = cv::imread(imgList[generalIndex], cv::IMREAD_UNCHANGED);
-            size = inputImg.size();
-            imgType = inputImg.type();
-            channels = inputImg.channels();
-            memcpy(batchPtr + (j+threadBatchSize*id)*sizeof(unsigned char)*MAX_W*MAX_H*MAX_C, inputImg.ptr(), sizeof(unsigned char)*size.area()*channels);
+            memcpy(batchPtr + (j+threadBatchSize*id)*sizeof(unsigned char)*W*H*channels, inputImg.ptr(), sizeof(unsigned char)*size.area()*channels);
         }
-        size_t ptrOffset = threadBatchSize*id*sizeof(unsigned char)*MAX_W*MAX_H*MAX_C;
+        size_t ptrOffset = threadBatchSize*id*sizeof(unsigned char)*W*H*channels;
         dim3 dimGrid((size.width/dimBlock.x)+1,(size.height/dimBlock.y)+1, currentBatchSize);
-        CUDA_CHECK(cudaMemcpyAsync(deviceInput + ptrOffset , batchPtr + ptrOffset, sizeof(unsigned char)*MAX_W*MAX_H*MAX_C*currentBatchSize, cudaMemcpyHostToDevice, streams[id]));
-        printf("Size width: %d \n", size.width);
-        printf("Size height: %d \n", size.height);
+        CUDA_CHECK(cudaMemcpyAsync(deviceInput + ptrOffset , batchPtr + ptrOffset, sizeof(unsigned char)*W*H*channels*currentBatchSize, cudaMemcpyHostToDevice, streams[id]));
         applyCudaKernel <<<dimGrid, dimBlock, 0, streams[id]>>> (deviceInput + ptrOffset, deviceOutput + ptrOffset, cfg.K, size.width, size.height, channels);
-        CUDA_CHECK(cudaMemcpyAsync(batchPtr + ptrOffset, deviceOutput + ptrOffset, sizeof(unsigned char)*MAX_W*MAX_H*MAX_C*currentBatchSize, cudaMemcpyDeviceToHost, streams[id]));
+        CUDA_CHECK(cudaMemcpyAsync(batchPtr + ptrOffset, deviceOutput + ptrOffset, sizeof(unsigned char)*W*H*channels*currentBatchSize, cudaMemcpyDeviceToHost, streams[id]));
         CUDA_CHECK(cudaStreamSynchronize(streams[id]));
 
         for (long long j=0; j<currentBatchSize; j++) {
@@ -128,7 +124,7 @@ int main(int argc, char* argv[]) {
             }
 
             cv::Mat outputImg =  cv::Mat::zeros(size, imgType);
-            memcpy(outputImg.ptr(), batchPtr + (j+threadBatchSize*id)*sizeof(unsigned char)*MAX_W*MAX_H*MAX_C, sizeof(unsigned char)*size.area()*channels);
+            memcpy(outputImg.ptr(), batchPtr + (j+threadBatchSize*id)*sizeof(unsigned char)*W*H*channels, sizeof(unsigned char)*size.area()*channels);
 
             std::string outputPath = "../cuda_output_" + std::to_string(size.width) + "_" + "k=" + std::to_string(cfg.K) + "/" + imgList[generalIndex].filename().string();
             cv::imwrite(outputPath, outputImg);

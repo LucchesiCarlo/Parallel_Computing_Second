@@ -5,6 +5,7 @@
 
 #include "cuda_kernel.cuh"
 #include "kernel_functions.h"
+
 __constant__ float cuda_kernel[MAX_K*MAX_K];
 
 __host__ cudaError_t loadKernel(float* kernel, int K) {
@@ -18,7 +19,7 @@ __global__  void applyCudaKernel(unsigned char* in, unsigned char* out, int K, i
 
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
-    size_t offset = MAX_W*MAX_H*MAX_C*blockIdx.z;
+    size_t offset = W*H*C*blockIdx.z;
 
     if (x >= W || y >= H) {return;}
 
@@ -36,5 +37,4 @@ __global__  void applyCudaKernel(unsigned char* in, unsigned char* out, int K, i
         }
         out[y * W * C + x * C + c + offset] = cudaClamping(result);
     }
-
 }
