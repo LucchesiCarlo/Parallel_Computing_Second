@@ -16,7 +16,7 @@ __device__ inline unsigned char cudaClamping(float x) {
     return static_cast<unsigned char> (x);
 }
 
-__host__ void loadKernel(float* kernel, int K);
+__host__ cudaError_t loadKernel(float* kernel, int K);
 __global__  void applyCudaKernel(unsigned char* in, unsigned char* out, int K, int W, int H, int C);
 
 

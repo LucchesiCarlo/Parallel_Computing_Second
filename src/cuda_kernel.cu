@@ -5,9 +5,9 @@
 
 #include "cuda_kernel.cuh"
 __constant__ float cuda_kernel[MAX_K*MAX_K];
-__host__ void loadKernel(float* kernel, int K) {
+__host__ cudaError_t loadKernel(float* kernel, int K) {
 
-    cudaMemcpyToSymbol(cuda_kernel, kernel, sizeof(float)*K*K);
+    return cudaMemcpyToSymbol(cuda_kernel, kernel, sizeof(float)*K*K);
 }
 
 __global__  void applyCudaKernel(unsigned char* in, unsigned char* out, int K, int W, int H, int C) {
