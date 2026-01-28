@@ -29,7 +29,7 @@ int main() {
     auto inputPtr = inputImg.ptr();
     auto outputPtr = outputImg.ptr();
 
-    applyKernel<3>(inputPtr, outputPtr, kernel, size.width, size.height, inputImg.channels());
+    applyKernel(inputPtr, outputPtr, kernel, 3, size.width, size.height, inputImg.channels());
 
     cv:imwrite(outPath, outputImg);
 }

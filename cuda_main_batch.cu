@@ -117,7 +117,6 @@ int main(int argc, char* argv[]) {
 
             std::string outputPath = "../cuda_output_" + std::to_string(size.width) + "_" + "k=" + std::to_string(cfg.K) + "/" + imgList[generalIndex].filename().string();
             cv::imwrite(outputPath, outputImg);
-
         }
 
     }
