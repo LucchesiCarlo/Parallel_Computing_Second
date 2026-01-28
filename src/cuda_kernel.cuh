@@ -5,6 +5,7 @@
 #ifndef SECOND_ASSIGNMENT_CUDA_KERNEL_CUH
 #define SECOND_ASSIGNMENT_CUDA_KERNEL_CUH
 
+#include "kernel_functions.h"
 
 __device__ inline unsigned char cudaClamping(float x) {
     if (x < 0.0f) x = 0.0f;
