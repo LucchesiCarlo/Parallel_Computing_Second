@@ -8,3 +8,4 @@ parallel_image_output/
 cuda_output/
 cuda_tiling_output/
 scripts/*.csv
+scripts/.ipynb_checkpoints

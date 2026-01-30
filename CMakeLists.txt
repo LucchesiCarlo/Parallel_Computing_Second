@@ -48,7 +48,6 @@ target_link_libraries(ParallelImg ${OpenCV_LIBS} )
 add_executable(Cuda cuda_main.cu src/cuda_kernel.cu)
 target_link_libraries(Cuda ${OpenCV_LIBS} OpenMP::OpenMP_CXX)
 
-
 add_executable(CudaTile cuda_main.cu src/cuda_kernel_tiling.cu)
 target_link_libraries(CudaTile ${OpenCV_LIBS} OpenMP::OpenMP_CXX)
 
